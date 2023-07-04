@@ -1,5 +1,6 @@
 #include <LiquidCrystal.h>
 #include <stdio.h>
+#include <math.h>
 
 constexpr int RS = 12, EN = 11, D4 = 10, D5 = 9, D6 = 8, D7 = 7;
 constexpr int SIG_IN = A0, SIG_REF = A1;
@@ -30,11 +31,15 @@ void loop() {
     double dVol_in = analogRead(SIG_IN) * SIG_MAX_VOL / ANALOG_MAX;
     double dVol_ref = analogRead(SIG_REF) * SIG_MAX_VOL / ANALOG_MAX;
     double dHertz = analogRead(HZ) * 20. / ANALOG_MAX + 10;
+    // ↓↓↓テスト用
+    dVol_in = 1.0;
+    dVol_ref = 1.0;
+    // ↑↑↑テスト用
     double dWatt_in = vol_to_watt(FW61, dVol_in, dHertz);
     double dWatt_ref = vol_to_watt(FW58, dVol_ref, dHertz);
     // ↓↓↓テスト用
-    dWatt_in = 21.3882;
-    dWatt_ref = 0.932;
+    // dWatt_in = 21.3882;
+    // dWatt_ref = 0.932;
     // dHertz = 13.56286;
     // ↑↑↑テスト用
     lcd.clear();
@@ -52,5 +57,14 @@ void loop() {
     delay(1000);
 }
 
+// 方向性結合器の出入力比(入出力比の逆)
 double vol_to_watt(int nDet, double vol, double hertz) {
+  if (nDet == FW58) {
+    double B = (-0.000576326358200036*(hertz*hertz*hertz) + 0.0580062059447736*(hertz*hertz) - 2.52085896819404*hertz + 92.4129697039502)/10 - 3; // 方結出力側
+    return ((2.0424388986619e-05*(vol*vol) + 0.00202430415694329*vol + 7.02827150367452e-05)*pow(10,B));
+  }
+  else if (nDet == FW61) {
+    double B = (-0.00119220702668374*(hertz*hertz*hertz) + 0.0966232853857063*(hertz*hertz) - 3.28289959924571*hertz + 96.7972152618555)/10 - 3; // 方結入力側
+    return ((1.72277251555492e-05*(vol*vol) + 0.00171336281683369*vol + 7.12796451662058e-05)*pow(10,B));
+  }
 }
