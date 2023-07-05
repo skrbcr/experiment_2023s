@@ -30,8 +30,8 @@ void setup() {
 }
 
 void loop() {
-    double dVol_in = analogRead(SIG_IN) * 5. / ANALOG_MAX / RATIO_AMP;
-    double dVol_ref = analogRead(SIG_REF) * 5. / ANALOG_MAX / RATIO_AMP;
+    double dVol_in = analogRead(SIG_IN) * 5000. / ANALOG_MAX / RATIO_AMP;
+    double dVol_ref = analogRead(SIG_REF) * 5000. / ANALOG_MAX / RATIO_AMP;
     double dHertz = analogRead(HZ) * 20. / ANALOG_MAX + 10;
     double dWatt_in = vol_to_watt(FW61, dVol_in, dHertz);
     double dWatt_ref = vol_to_watt(FW58, dVol_ref, dHertz);
