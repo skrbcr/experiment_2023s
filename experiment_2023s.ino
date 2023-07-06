@@ -1,11 +1,9 @@
 #include <LiquidCrystal.h>
 #include <stdio.h>
-#include <math.h>
 
 // 使用状況に合わせて変更(検波器はFW61をFwdに, FW58をRevに接続することを想定)
 constexpr int RS = 12, EN = 11, D4 = 10, D5 = 9, D6 = 8, D7 = 7;    // LCD に接続するピン番号
 constexpr int SIG_IN = A0, SIG_REF = A1, HZ = A2;   // 方向性結合器を入力するピン
-constexpr double RATIO_AMP = 100.;  // オペアンプの電圧増幅率
 enum {  // 方向性結合器の番号
     FW58,
     FW61,
@@ -13,6 +11,8 @@ enum {  // 方向性結合器の番号
 // 定数
 constexpr double ANALOG_MAX = 1023.;    // アナログ入力のサンプリングの最大値
 constexpr int NBUF = 17;    // LCD の1列文字数
+constexpr double VOL_MAX = 5000.;   // 電圧の最大値 [mV]
+constexpr double SPAN_UPDATE = 500; // 画面アップデートの間隔 [ms]
 // LCD 変数
 LiquidCrystal lcd = LiquidCrystal(RS, EN, D4, D5, D6, D7);
 char lpszDisp1[NBUF] = { '\0' };    // LCD 1行目表示文字列
@@ -30,24 +30,57 @@ void setup() {
 }
 
 void loop() {
-    double dVol_in = analogRead(SIG_IN) * 5000. / ANALOG_MAX / RATIO_AMP;
-    double dVol_ref = analogRead(SIG_REF) * 5000. / ANALOG_MAX / RATIO_AMP;
+    static int i = 0;                   // 現在のスパンのループ回数
+    static double time_prev = millis(); // 前回画面更新時の時間
+    static double time = 0.;            // 現在時刻
+    static double dWatt_in_avg = 0.;    // 入力電力の平均値
+    static double dWatt_ref_avg = 0.;   // 反射電力の平均値
+    // 入力・反射電力の計算
+    double dVol_in = analogRead(SIG_IN) * VOL_MAX / ANALOG_MAX;
+    double dVol_ref = analogRead(SIG_REF) * VOL_MAX / ANALOG_MAX;
+    Serial.println(analogRead(SIG_REF));
+    Serial.println(dVol_ref);
     double dHertz = analogRead(HZ) * 20. / ANALOG_MAX + 10;
     double dWatt_in = vol_to_watt(FW61, dVol_in, dHertz);
     double dWatt_ref = vol_to_watt(FW58, dVol_ref, dHertz);
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    char lpszTmp1[NBUF] = { '\0' };
-    char lpszTmp2[NBUF] = { '\0' };
-    dtostrf(dHertz, 4, 1, lpszTmp1);
-    sprintf(lpszDisp1, "f:%sMHz", lpszTmp1);
-    dtostrf(dWatt_in, 4, 1, lpszTmp1);
-    dtostrf(dWatt_ref, 4, 1, lpszTmp2);
-    sprintf(lpszDisp2, "In:%sW R:%sW", lpszTmp1, lpszTmp2);
-    lcd.print(lpszDisp1);
-    lcd.setCursor(0, 1);
-    lcd.print(lpszDisp2);
-    delay(1000);
+    // 平均値に加算しておく
+    dWatt_in_avg += dWatt_in;
+    dWatt_ref_avg += dWatt_ref;
+    time = millis();
+    ++i;
+    if (time - time_prev >= SPAN_UPDATE) {
+        // 平均値の計算
+        dWatt_in_avg /= (double)i;
+        dWatt_ref_avg /= (double)i;
+        // 画面描画
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        char lpszTmp1[NBUF] = { '\0' };
+        char lpszTmp2[NBUF] = { '\0' };
+        dtostrf(dHertz, 4, 1, lpszTmp1);
+        sprintf(lpszDisp1, "f:%sMHz", lpszTmp1);
+        if (dWatt_in_avg < 1000.) {
+            dtostrf(dWatt_in_avg, 4, 1, lpszTmp1);
+        }
+        else {
+            dtostrf(dWatt_in_avg, 4, 0, lpszTmp1);
+        }
+        if (dWatt_ref_avg < 1000.) {
+            dtostrf(dWatt_ref_avg, 4, 1, lpszTmp2);
+        }
+        else {
+            dtostrf(dWatt_ref_avg, 4, 0, lpszTmp2);
+        }
+        sprintf(lpszDisp2, "In:%sW R:%sW", lpszTmp1, lpszTmp2);
+        lcd.print(lpszDisp1);
+        lcd.setCursor(0, 1);
+        lcd.print(lpszDisp2);
+        // 次スパンの準備
+        i = 0;
+        dWatt_in_avg = 0.;
+        dWatt_ref_avg = 0.;
+        time_prev = time;
+    }
 }
 
 // 方向性結合器+検波器の出入力比(入出力比の逆)[mV -> W]
