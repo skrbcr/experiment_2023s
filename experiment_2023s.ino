@@ -61,13 +61,13 @@ void loop() {
             dtostrf(dWatt_in_avg, 4, 1, lpszTmp1);
         }
         else {
-            dtostrf(dWatt_in_avg, 4, 0, lpszTmp1);
+            dtostrf(dWatt_in_avg, 3, 0, lpszTmp1);
         }
         if (dWatt_ref_avg < 100.) {
             dtostrf(dWatt_ref_avg, 4, 1, lpszTmp2);
         }
         else {
-            dtostrf(dWatt_ref_avg, 4, 0, lpszTmp2);
+            dtostrf(dWatt_ref_avg, 3, 0, lpszTmp2);
         }
         sprintf(lpszDisp2, "In:%sW R:%sW", lpszTmp1, lpszTmp2);
         lcd.print(lpszDisp1);
