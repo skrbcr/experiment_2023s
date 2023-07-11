@@ -12,7 +12,7 @@ enum {  // 方向性結合器の番号
 constexpr double ANALOG_MAX = 1023.;    // アナログ入力のサンプリングの最大値
 constexpr int NBUF = 17;    // LCD の1列文字数
 constexpr double VOL_MAX = 5000.;   // 電圧の最大値 [mV]
-constexpr double SPAN_UPDATE = 500; // 画面アップデートの間隔 [ms]
+constexpr double SPAN_UPDATE = 1000; // 画面アップデートの間隔 [ms]
 // LCD 変数
 LiquidCrystal lcd = LiquidCrystal(RS, EN, D4, D5, D6, D7);
 char lpszDisp1[NBUF] = { '\0' };    // LCD 1行目表示文字列
@@ -38,8 +38,6 @@ void loop() {
     // 入力・反射電力の計算
     double dVol_in = analogRead(SIG_IN) * VOL_MAX / ANALOG_MAX;
     double dVol_ref = analogRead(SIG_REF) * VOL_MAX / ANALOG_MAX;
-    Serial.println(analogRead(SIG_REF));
-    Serial.println(dVol_ref);
     double dHertz = analogRead(HZ) * 20. / ANALOG_MAX + 10;
     double dWatt_in = vol_to_watt(FW61, dVol_in, dHertz);
     double dWatt_ref = vol_to_watt(FW58, dVol_ref, dHertz);
@@ -59,13 +57,13 @@ void loop() {
         char lpszTmp2[NBUF] = { '\0' };
         dtostrf(dHertz, 4, 1, lpszTmp1);
         sprintf(lpszDisp1, "f:%sMHz", lpszTmp1);
-        if (dWatt_in_avg < 1000.) {
+        if (dWatt_in_avg < 100.) {
             dtostrf(dWatt_in_avg, 4, 1, lpszTmp1);
         }
         else {
             dtostrf(dWatt_in_avg, 4, 0, lpszTmp1);
         }
-        if (dWatt_ref_avg < 1000.) {
+        if (dWatt_ref_avg < 100.) {
             dtostrf(dWatt_ref_avg, 4, 1, lpszTmp2);
         }
         else {
@@ -89,11 +87,11 @@ double vol_to_watt(int nDet, double vol, double hertz) {
     switch (nDet) {
     case FW58:
         B = -5.76326358200036e-5 * pow(hertz, 3.) + 5.80062059447736e-3 * pow(hertz, 2.) - 2.52085896819404e-1 * hertz + 9.24129697039502; // 方結出力(Output->Rev)側の比(Bell)
-        res = (2.0424388986619e-8 * pow(vol, 2.) + 2.02430415694329e-6 * vol + 7.02827150367452e-8) * pow(10., B); // 検波器([mV] -> [W]) * 方結出入力比
+        res = (-1.50340977920869e-12 * pow(vol, 2.) + 6.34155570284821e-8 * vol + 4.334133554936e-7) * pow(10., B); // 検波器([mV] -> [W]) * 方結出入力比
         break;
     case FW61:
         B = -1.19220702668374e-4 * pow(hertz, 3.) + 9.66232853857063e-3 * pow(hertz, 2.) - 3.28289959924571e-1 * hertz + 9.67972152618555; // 方結入力(Input->FWD)側の比(Bell)
-        res = (1.72277251555492e-8 * pow(vol, 2.) + 1.71336281683369e-6 * vol + 7.12796451662058e-8) * pow(10., B); // 検波器出入力比([mV] -> [W]) * 方結出入力比
+        res = (2.2885279158909e-12 * pow(vol, 2.) + 2.72945180746094e-8 * vol - 5.06432082885848e-7) * pow(10., B); // 検波器出入力比([mV] -> [W]) * 方結出入力比
         break;
     default:
         res = 0.;
