@@ -1,4 +1,3 @@
 # experiment_2023s
 
-## About
-This reporitory is for my team mate of the experiperiment class.
+2023年度特別実験I プラズマ実験で製作した電力計測計のプログラム
